@@ -9,12 +9,74 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  Alert,
+  AsyncStorage,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 export default function App() {
-  const [task, setTask] = useState(["jair", "marcos"]);
+  const [task, setTask] = useState([]);
   const [newtask, setNewtask] = useState("");
+
+  async function addTask() {
+    if (newtask === "") {
+      return;
+    }
+
+    const search = task.filter((task) => task === newtask);
+
+    if (search.length !== 0) {
+      Alert.alert("Atenção", "Nome da tarefa repetido!");
+      return;
+    }
+
+    setTask([...task, newtask]);
+    setNewtask("");
+
+    // para despensar o teclado quando add
+    Keyboard.dismiss();
+  }
+
+  async function removerTask(item) {
+    Alert.alert(
+      "Deletar Task",
+      "Tem certeza que deseja remover essa anotação?",
+      [
+        {
+          text: "Cancel",
+          onPress: () => {
+            return;
+          },
+          style: "cancel",
+        },
+        {
+          text: "OK",
+          onPress: () => setTask(task.filter((tasks) => tasks !== item)),
+        },
+      ],
+      { cancelable: false }
+    );
+  }
+
+  // carregar dados
+  useEffect(() => {
+    async function carregarDados() {
+      const task = await AsyncStorage.getItem("task");
+      if (task) {
+        setTask(JSON.parse(task));
+      }
+    }
+    carregarDados();
+  }, []);
+
+  // salvar
+  useEffect(() => {
+    async function salvarDados() {
+      AsyncStorage.setItem("task", JSON.stringify(task));
+    }
+    salvarDados();
+  }, [task]);
 
   return (
     <>
@@ -34,7 +96,7 @@ export default function App() {
               renderItem={({ item }) => (
                 <View style={styles.containerView}>
                   <Text style={styles.texto}>{item}</Text>
-                  <TouchableOpacity>
+                  <TouchableOpacity onPress={() => removerTask(item)}>
                     <MaterialIcons
                       name="delete-forever"
                       size={25}
@@ -54,9 +116,16 @@ export default function App() {
               autoCorrect={true}
               placeholder="Adicione uma tarefa"
               maxLength={25}
+              onChangeText={(text) => setNewtask(text)}
+              value={newtask}
             />
             <TouchableOpacity style={styles.botao}>
-              <Ionicons name="ios-add" size={25} color="#FFF" />
+              <Ionicons
+                name="ios-add"
+                size={25}
+                color="#FFF"
+                onPress={() => addTask()}
+              />
             </TouchableOpacity>
           </View>
         </View>
